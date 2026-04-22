@@ -1,64 +1,75 @@
-# Wazuh-SOC-IPS-Lab
-# Wazuh SOC 态势感知与自动化防御实战
+Wazuh-SOC-IPS-Lab：基于容器化环境的自动化防御实战
+项目定位：本项目不仅是一个 SOC 态势感知实验，更是一次针对 Docker 容器环境 下安全审计与自动化拦截（IPS）的深度调优实践。通过解决容器网络隔离、日志持久化挂载等复杂问题，实现了秒级的“检测-响应”闭环。
 
-> **核心亮点**：本项目实现了从检测到拦截的秒级闭环。当 Kali Linux 发起 SQL 注入攻击时，系统可在不经过人工干预的情况下，自动识别威胁并实时封禁攻击源。
+🏗️ 系统架构与拓扑 (Topology)
+SOC Manager: Wazuh Server (192.168.152.128) - 核心大脑，负责规则匹配与指令下发。
 
-## 🛡️ 项目背景
-本项目基于分布式安全架构，模拟企业级 SOC（安全运营中心）的运作流程：
-1. **监测**：Agent 监控 Docker 靶场日志。
-2. **分析**：Manager 匹配规则引擎，识别高危攻击。
-3. **响应**：Active Response 秒级下发防火墙阻断指令。
-4. **呈现**：Dashboard 实时展示地理溯源与拦截数据。
+Target Agent: Ubuntu Server 24.04 (192.168.152.129) - 部署 Wazuh Agent 与 Docker 靶场。
 
-## 📂 仓库指南
-* `/configs`: 包含核心配置片段（Decoder/Rules/Manager）。
-* `/scripts`: 自动化运维与自定义告警脚本。
-* `/screenshots`: 包含系统运行全图及拦截证明。
+Attacker: Kali Linux (192.168.152.130) - 模拟 SQL 注入与扫描攻击。
 
-## 📊 实验效果展示
-![SOC Dashboard](./screenshots/dashboard_main.png)
-*上图展示了实时攻击地图及拦截计数器。*
+Business App: DVWA (Docker Container) - 运行在宿主机 8080 端口。
 
-## 🧠 技术原理 (Deep Dive)
-* **日志链路**：Docker Log -> Host Mount -> Wazuh Agent -> Manager Analysis.
-* **封禁逻辑**：检测到 Rule ID 31103 (SQLi) -> 触发 firewall-drop -> 修改宿主机 iptables。
-故障排除指南 (Troubleshooting)
-在搭建这套分布式 SOC 系统的过程中，我遇到并解决了以下核心技术问题。这些经验对于维护生产环境中的 Wazuh 具有参考价值：
+📂 核心配置快照 (Key Configurations)
+1. 自动化防御 (Active Response)
+在 Manager 端 ossec.conf 中配置，针对 SQL 注入（Rule 31106, 31164）执行 10 秒自动封禁：
 
-1. Agent 状态显示为 Disconnected 或 Never connected
-现象：在 Dashboard 中看不到 Agent 节点，或者执行 agent_control -l 列表为空。
+XML
+<command>
+  <name>firewall-drop</name>
+  <executable>firewall-drop</executable>
+  <expect>srcip</expect> <timeout_allowed>yes</timeout_allowed>
+</command>
 
-排查步骤：
-网络连接：检查服务端 1514 (UDP) 和 1515 (TCP) 端口是否开放。
+<active-response>
+  <command>firewall-drop</command>
+  <location>local</location>
+  <rules_id>31103,31106,31164</rules_id>
+  <timeout>10</timeout>
+</active-response>
+2. 日志链路重构
+为了解决容器销毁导致日志丢失的问题，采用 Volume 挂载 + 路径监控：
 
-密钥校验：确认 Agent 端 /var/ossec/etc/client.keys 里的密钥与服务端生成的密钥一致。
+Docker 启动命令：
+docker run -d --name dvwa-lab -p 8080:80 -v /var/log/dvwa:/var/log/apache2 vulnerables/web-dvwa
 
-服务状态：执行 systemctl status wazuh-agent 查看是否有 Error 111 (Connection refused) 报错。
+Agent 监控配置：
 
-解决方法：重新执行密钥导入命令 bin/manage_agents -i <key> 并重启服务。
+XML
+<localfile>
+  <log_format>apache</log_format>
+  <location>/var/log/dvwa/access.log</location> </localfile>
+🛠️ 深度排障实录 (Advanced Troubleshooting)
+这是本项目最具技术价值的部分，记录了在容器化环境中遇到的“坑”及解决方案：
 
-2. 日志已产生但 Dashboard 无数据
-现象：Docker 日志在宿主机 /var/log/dvwa/access.log 已经更新，但 Dashboard 没有任何 Web 告警。
+1. Docker 网络层级的“防御失效”问题
+现象：Wazuh 日志显示已触发 firewall-drop，但攻击者（Kali）依然能访问 Web。
 
-排查步骤：
+深度分析：Wazuh 默认脚本修改的是 INPUT 链，而 Docker 流量通过 PREROUTING 直接进入了 FORWARD 链，绕过了标准防火墙策略。
 
-权限检查：检查该日志文件是否具有读取权限。Wazuh Agent 运行用户（通常是 root 或 wazuh）必须能访问该路径。
+解决建议：在生产环境中需修改脚本作用于 DOCKER-USER 链。手动验证命令：
+sudo iptables -I DOCKER-USER -s 192.168.152.130 -j DROP
 
-格式验证：在 ossec.conf 中确认 <log_format> 是否被正确设为 apache。
+2. SSL_ERROR_RX_RECORD_TOO_LONG 协议报错
+现象：重启 Docker 服务后，浏览器显示“建立安全连接失败”。
 
-分析引擎检查：查看服务端日志 /var/ossec/logs/ossec.log，确认是否有 Archives 处理延迟。
+根本原因：由于浏览器 HSTS 缓存，自动将访问重定向至 https://...:8080。由于 DVWA 容器仅支持 HTTP 80 端口，导致协议头不匹配。
 
-解决方法：执行 chmod 644 /var/log/dvwa/access.log 并确保 ossec.conf 中的路径完全正确。
+修复方法：清理缓存或强制手动指定 http:// 访问。
 
-3. Active Response 脚本未触发拦截
-现象：发生了 SQL 注入且规则已报警（Level 10），但攻击者 IP 依然可以访问网页。
+3. Dashboard 数据聚合延迟与过滤器偏置
+现象：Threat Hunting 页面有 31164 告警，但 SOC-Center 仪表盘显示为 0。
 
-排查步骤：
+排查过程：分析 DQL 查询语句，发现 Dashboard 预设 Metric 仅统计 Level > 12 的事件。
 
-指令确认：检查服务端日志 /var/ossec/logs/active-responses.log，看是否有 firewall-drop 执行记录。
+解决思路：自定义可视化图表（Visualizations），将 rule.id: 31164 纳入统计范畴。
 
-脚本路径：确认 Agent 端 /var/ossec/active-response/bin/ 下是否存在对应的执行脚本。
+📊 实验成果验证
+攻击识别：Kali 发起 UNION SELECT 注入，Wazuh Dashboard 实时弹出红色告警（Rule 31164）。
 
-防火墙依赖：确认宿主机是否安装了 iptables 或 nftables，因为内置脚本依赖这些底层工具。
+自动阻断：执行 sudo tail -f /var/ossec/logs/active-responses.log 观测到 firewall-drop 指令下发。
 
-解决方法：在 ossec.conf 中显式指定 <location>local</location> 以确保指令下发到正确的 Agent。
+状态恢复：设定的 10 秒 timeout 到期后，系统自动删除 iptables 规则，业务访问恢复。
+
+💡 结语与思考
+在容器化时代，传统的 SOC 部署不能仅仅依赖默认配置。通过本项目，我深刻体会到 容器网络驱动（Bridge Mode）与宿主机内核防火墙（Netfilter） 的交互逻辑是决定安全策略是否生效的关键。未来的优化方向将聚焦于直接在容器内构建 Sidecar 审计模式，以实现更细粒度的流量控制。
