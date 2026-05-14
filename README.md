@@ -31,9 +31,9 @@
 
 | 角色 | 主机名 | IP 地址 | 操作系统 | 用途 |
 |------|--------|---------|----------|------|
-| SIEM 服务器 | Wazuh-Server | `192.168.152.128` | Ubuntu Server | Wazuh Manager + 规则匹配 + 指令下发 |
-| 目标靶机 | Ubuntu-Target | `192.168.152.129` | Ubuntu 24.04 | Wazuh Agent + Docker 靶场 |
-| 攻击机 | Kali-Linux | `192.168.152.130` | Kali Linux | SQL 注入、端口扫描等攻击 |
+| SIEM 服务器 | Wazuh-Server | `192.168.232.132` | Ubuntu Server | Wazuh Manager + 规则匹配 + 指令下发 |
+| 目标靶机 | Ubuntu-Target | `192.168.232.135` | Ubuntu 24.04 | Wazuh Agent + Docker 靶场 |
+| 攻击机 | Kali-Linux | `192.168.232.129` | Kali Linux | SQL 注入、端口扫描等攻击 |
 | 内网终端 | Win7-Target | DHCP | Windows 7 | 内网客户端 + Sysmon + Wazuh Agent |
 | 业务应用 | DVWA | Docker :8080 | Docker Container | 在 Ubuntu 靶机 8080 端口运行 |
 

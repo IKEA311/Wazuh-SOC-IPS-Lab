@@ -34,7 +34,7 @@ from datetime import datetime, timedelta
 
 CONFIG = {
     "wazuh": {
-        "host": "192.168.152.128",
+        "host": "192.168.232.132",
         "port": 55000,
         "user": "wazuh-api",
         "password": "P@ssw0rdPurple!",
@@ -46,13 +46,13 @@ CONFIG = {
         "block_duration": 3600,       # 封禁时长（秒）= 1h
     },
     "targets": [                      # 需要执行封禁的主机
-        {"host": "192.168.152.129", "user": "root", "port": 22,
+        {"host": "192.168.232.135", "user": "root", "port": 22,
          "via": "ssh"},
-        {"host": "192.168.152.128", "user": "root", "port": 22,
+        {"host": "192.168.232.132", "user": "root", "port": 22,
          "via": "local"},  # Wazuh Server 自身用本地 iptables
     ],
     "whitelist": [                    # 永不封禁的网段
-        "192.168.152.0/24",
+        "192.168.232.0/24",
         "10.0.0.0/8",
         "172.16.0.0/12",
     ],
