@@ -1,0 +1,57 @@
+<!--
+  Purple Team Lab - MS17-010 永恒之蓝检测规则
+  规则 ID 范围: 100040-100049
+  检测 SMB 漏洞利用、横向移动、后门行为
+-->
+<group name="ms17-010,">
+  <!-- SMB 网络连接检测（Sysmon EventID 3, 端口 445） -->
+  <rule id="100040" level="7">
+    <if_sid>60103</if_sid>
+    <field name="event_id">^3$</field>
+    <field name="destination_port">445</field>
+    <description>SMB 网络连接 - 可能的内网横向移动</description>
+    <group>lateral_movement,smb,</group>
+  </rule>
+
+  <!-- spoolsv.exe 异常子进程（MS17-010 典型特征） -->
+  <rule id="100041" level="12">
+    <if_sid>61647</if_sid>
+    <field name="parent_process">.*spoolsv\.exe</field>
+    <description>MS17-010 利用检测 - spoolsv.exe 创建异常子进程</description>
+    <group>attack,ms17-010,exploit,</group>
+  </rule>
+
+  <!-- 异常进程链检测 -->
+  <rule id="100042" level="10">
+    <if_sid>61647</if_sid>
+    <field name="process_name">cmd\.exe|powershell\.exe</field>
+    <field name="parent_process">spoolsv\.exe|lsass\.exe|svchost\.exe</field>
+    <description>异常进程链 - 非交互式进程启动 cmd.exe/powershell.exe</description>
+    <group>attack,anomaly,process_chain,</group>
+  </rule>
+
+  <!-- 用户创建检测（权限维持） -->
+  <rule id="100043" level="10">
+    <if_sid>60103</if_sid>
+    <field name="event_id">^4720$|^4722$|^4732$|^4728$</field>
+    <description>Windows 用户/组变更告警 - 可能的权限维持</description>
+    <group>attack,persistence,account_manipulation,</group>
+  </rule>
+
+  <!-- 服务安装检测 -->
+  <rule id="100044" level="9">
+    <if_sid>60103</if_sid>
+    <field name="event_id">^7045$</field>
+    <description>Windows 服务安装事件 - 可能的持久化后门</description>
+    <group>attack,persistence,service_install,</group>
+  </rule>
+
+  <!-- 远程桌面启用检测 -->
+  <rule id="100045" level="8">
+    <if_sid>60103</if_sid>
+    <field name="event_id">^13$</field>
+    <field name="reg_path">.*Control\\Terminal Server</field>
+    <description>远程桌面配置修改 - 可能的远程访问后门</description>
+    <group>attack,persistence,rdp_backdoor,</group>
+  </rule>
+</group>

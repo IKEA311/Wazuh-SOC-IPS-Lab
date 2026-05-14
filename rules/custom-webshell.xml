@@ -1,0 +1,38 @@
+<!--
+  Purple Team Lab - WebShell 检测规则
+  规则 ID 范围: 100030-100039
+  检测 WebShell 上传、通信、行为
+-->
+<group name="webshell,">
+  <!-- FIM 检测 WebShell 文件创建 -->
+  <rule id="100030" level="7">
+    <if_sid>554</if_sid>
+    <field name="file">\.php$</field>
+    <description>可疑 PHP 文件创建 - 可能的 WebShell 植入</description>
+    <group>fim,webshell,suspicious_file,</group>
+  </rule>
+
+  <!-- WebShell 通信流量检测 -->
+  <rule id="100031" level="9">
+    <if_sid>80700</if_sid>
+    <match>eval|base64_decode|system\(|shell_exec|passthru</match>
+    <description>WebShell 通信检测 - 请求包含典型 WebShell 函数</description>
+    <group>attack,webshell,</group>
+  </rule>
+
+  <!-- 对疑似 WebShell 路径的 POST 请求 -->
+  <rule id="100032" level="12">
+    <if_sid>100031</if_sid>
+    <regex type="pcre2">POST\s.*shell\.php|POST\s.*cmd\.php|POST\s.*eval\.php</regex>
+    <description>WebShell 连接确认 - POST 请求到疑似 Webshell 页面</description>
+    <group>attack,webshell,critical,</group>
+  </rule>
+
+  <!-- 上传目录中的 PHP 执行 -->
+  <rule id="100033" level="10">
+    <if_sid>80700</if_sid>
+    <regex type="pcre2">uploads/.*\.php|files/.*\.php|images/.*\.php</regex>
+    <description>WebShell 行为检测 - 上传目录中的 PHP 文件被执行</description>
+    <group>attack,webshell,upload_exec,</group>
+  </rule>
+</group>

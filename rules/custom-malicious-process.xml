@@ -1,0 +1,57 @@
+<!--
+  Purple Team Lab - 异常进程检测规则
+  规则 ID 范围: 100050-100059
+  检测恶意软件执行、凭据窃取、无文件攻击
+-->
+<group name="malicious-process,">
+  <!-- PowerShell 可疑参数执行 -->
+  <rule id="100050" level="10">
+    <if_sid>61647</if_sid>
+    <field name="process_name">powershell\.exe</field>
+    <match>-enc|-NoProfile|Hidden|IEX|DownloadString</match>
+    <description>PowerShell 可疑执行 - 可能的无文件攻击</description>
+    <group>attack,powershell,fileless,</group>
+  </rule>
+
+  <!-- 凭据窃取工具检测 -->
+  <rule id="100051" level="12">
+    <if_sid>61647</if_sid>
+    <field name="process_name">mimikatz\.exe|procdump\.exe|pwdump\.exe|gsecdump\.exe</field>
+    <description>凭据窃取工具执行检测</description>
+    <group>attack,credential_access,mimikatz,</group>
+  </rule>
+
+  <!-- 计划任务创建 -->
+  <rule id="100052" level="8">
+    <if_sid>60103</if_sid>
+    <field name="event_id">^4698$</field>
+    <description>计划任务创建 - 可能的权限维持</description>
+    <group>attack,persistence,scheduled_task,</group>
+  </rule>
+
+  <!-- 注册表自启动项修改 -->
+  <rule id="100053" level="9">
+    <if_sid>60103</if_sid>
+    <field name="event_id">^13$</field>
+    <field name="reg_path">.*CurrentVersion\\Run</field>
+    <description>注册表自动启动项修改 - 权限维持检测</description>
+    <group>attack,persistence,registry_run_key,</group>
+  </rule>
+
+  <!-- 事件日志清除检测 -->
+  <rule id="100054" level="11">
+    <if_sid>60103</if_sid>
+    <field name="event_id">^1102$|^104$</field>
+    <description>Windows 事件日志被清除 - 可能的攻击痕迹清理</description>
+    <group>attack,defense_evasion,log_clearing,</group>
+  </rule>
+
+  <!-- WMI 远程执行检测 -->
+  <rule id="100055" level="9">
+    <if_sid>61647</if_sid>
+    <field name="process_name">wmic\.exe|wmic\.exe</field>
+    <match>process|/node:|/user:</match>
+    <description>WMI 远程进程创建 - 可能的横向移动</description>
+    <group>attack,lateral_movement,wmi,</group>
+  </rule>
+</group>

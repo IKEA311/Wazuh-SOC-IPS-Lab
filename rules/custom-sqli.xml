@@ -1,0 +1,37 @@
+<!--
+  Purple Team Lab - SQL 注入检测规则
+  规则 ID 范围: 100010-100019
+  基于 Apache 访问日志检测 SQL 注入攻击
+-->
+<group name="sql-injection,">
+  <!-- 基础 SQLi 关键字检测 -->
+  <rule id="100010" level="8">
+    <if_sid>80700</if_sid>
+    <match>select|union|drop|insert|delete|--|%27|%23</match>
+    <description>SQL 注入攻击模式检测 - URL 参数包含恶意关键字</description>
+    <group>attack,sql_injection,</group>
+  </rule>
+
+  <!-- SQLMap 工具检测 -->
+  <rule id="100011" level="10">
+    <if_sid>100010</if_sid>
+    <match>sqlmap</match>
+    <description>SQLMap 自动化注入工具检测</description>
+    <group>attack,sql_injection,sqlmap,</group>
+  </rule>
+
+  <!-- UNION SELECT 注入成功检测 -->
+  <rule id="100012" level="12">
+    <if_sid>80700</if_sid>
+    <regex type="pcre2">\b(\d+)\b.*union.*select.*from|select.*from.*where.*=.*'</regex>
+    <description>SQL 注入成功 - 检测到 UNION SELECT 模式</description>
+    <group>attack,sql_injection,critical,</group>
+  </rule>
+
+  <!-- 批量注入尝试检测（频率聚合） -->
+  <rule id="100013" level="10" frequency="10" timeframe="30">
+    <if_matched_sid>100010</if_matched_sid>
+    <description>SQL 注入批量尝试 - 30 秒内 10 次</description>
+    <group>attack,sql_injection,high,</group>
+  </rule>
+</group>

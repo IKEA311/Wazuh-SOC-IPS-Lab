@@ -1,0 +1,63 @@
+<mxfile host="Electron" modified="2026-05-07T10:00:00.000Z" agent="Mozilla/5.0" version="21.6.5">
+  <diagram name="Purple Team Lab" id="purple-team-topology">
+    <mxGraphModel dx="1420" dy="820" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Wazuh Server -->
+        <mxCell id="wazuh" value="&lt;b&gt;Wazuh Server&lt;/b&gt;&lt;br&gt;192.168.152.128&lt;br&gt;Ubuntu Server&lt;br&gt;Wazuh Manager + Dashboard + Indexer&lt;br&gt;规则匹配 / 指令下发" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#5391FE;fontColor=#ffffff;strokeColor=#2979FF;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="200" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Ubuntu Target -->
+        <mxCell id="ubuntu" value="&lt;b&gt;Ubuntu 靶机&lt;/b&gt;&lt;br&gt;192.168.152.129&lt;br&gt;Ubuntu 24.04&lt;br&gt;Wazuh Agent + Docker&lt;br&gt;DVWA :8080" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFB300;fontColor=#ffffff;strokeColor=#FF8F00;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="240" width="200" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Kali -->
+        <mxCell id="kali" value="&lt;b&gt;Kali 攻击机&lt;/b&gt;&lt;br&gt;192.168.152.130&lt;br&gt;Kali Linux&lt;br&gt;SQLMap / Metasploit / weevely / nmap" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF4444;fontColor=#ffffff;strokeColor=#CC0000;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="360" y="240" width="200" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Win7 -->
+        <mxCell id="win7" value="&lt;b&gt;Win7 靶机&lt;/b&gt;&lt;br&gt;Windows 7&lt;br&gt;Wazuh Agent + Sysmon&lt;br&gt;MS17-010 漏洞" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFB300;fontColor=#ffffff;strokeColor=#FF8F00;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="680" y="240" width="200" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- 连接线: Kali → Ubuntu (SQLi) -->
+        <mxCell id="line1" value="SQLi / WebShell" style="edgeStyle=elbow;edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF4444;dashed=1;" edge="1" parent="1" source="kali" target="ubuntu">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 连接线: Kali → Win7 (MS17-010) -->
+        <mxCell id="line2" value="MS17-010" style="edgeStyle=elbow;edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF4444;dashed=1;" edge="1" parent="1" source="kali" target="win7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 连接线: Agent → Wazuh -->
+        <mxCell id="line3" value="日志上报 (1514/udp)" style="edgeStyle=elbow;edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5391FE;" edge="1" parent="1" source="ubuntu" target="wazuh">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="line4" value="日志上报 (1514/udp)" style="edgeStyle=elbow;edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5391FE;" edge="1" parent="1" source="win7" target="wazuh">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 攻击标签 -->
+        <mxCell id="attack-label" value="&lt;b&gt;攻击路径&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#FF4444;" vertex="1" parent="1">
+          <mxGeometry x="360" y="170" width="100" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- 日志标签 -->
+        <mxCell id="log-label" value="&lt;b&gt;日志上报&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#5391FE;" vertex="1" parent="1">
+          <mxGeometry x="120" y="170" width="100" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- 图例 -->
+        <mxCell id="legend" value="&lt;b&gt;图例&lt;/b&gt;&lt;br&gt;🔴 红色 = 攻击机 (Kali)&lt;br&gt;🟡 黄色 = 靶机 (Agent)&lt;br&gt;🔵 蓝色 = SIEM (Wazuh Server)&lt;br&gt;- - 虚线 = 攻击路径&lt;br&gt;── 实线 = 日志上报" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;fontColor=#333;strokeColor=#CCCCCC;" vertex="1" parent="1">
+          <mxGeometry x="680" y="40" width="200" height="120" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

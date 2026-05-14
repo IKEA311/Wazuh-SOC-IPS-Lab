@@ -1,0 +1,47 @@
+<!--
+  Purple Team Lab - 暴力破解检测规则
+  规则 ID 范围: 100020-100029
+  检测 SSH、RDP 等暴力破解行为
+-->
+<group name="brute-force,">
+  <!-- SSH 暴力破解 -->
+  <rule id="100020" level="5">
+    <if_sid>5710</if_sid>
+    <description>SSH 认证失败 - 可能是暴力破解</description>
+    <group>authentication_failure,brute_force,</group>
+  </rule>
+
+  <rule id="100021" level="10" frequency="5" timeframe="10">
+    <if_matched_sid>100020</if_matched_sid>
+    <description>SSH 暴力破解攻击 - 10 秒内 5 次失败</description>
+    <group>attack,brute_force,high,</group>
+  </rule>
+
+  <!-- RDP 暴力破解（Windows 安全日志 EventID 4625） -->
+  <rule id="100022" level="5">
+    <if_sid>60101</if_sid>
+    <match>4625</match>
+    <description>Windows RDP 登录失败 - 可能是暴力破解</description>
+    <group>authentication_failure,rdp_brute_force,</group>
+  </rule>
+
+  <rule id="100023" level="10" frequency="5" timeframe="60">
+    <if_matched_sid>100022</if_matched_sid>
+    <description>RDP 暴力破解攻击 - 60 秒内 5 次失败</description>
+    <group>attack,rdp_brute_force,high,</group>
+  </rule>
+
+  <!-- 多源 IP 暴力破解检测 -->
+  <rule id="100024" level="8" frequency="10" timeframe="60">
+    <if_matched_sid>100020</if_matched_sid>
+    <description>SSH 暴力破解 - 60 秒内 10 次失败（可能来自多源 IP）</description>
+    <group>attack,brute_force,multi_source,</group>
+  </rule>
+
+  <!-- 登录成功但之前有大量失败 - 暴力破解成功 -->
+  <rule id="100025" level="12">
+    <if_sid>5715,5716</if_sid>
+    <description>SSH 暴力破解可能成功 - 之前检测到多次失败后登录成功</description>
+    <group>attack,brute_force,success,</group>
+  </rule>
+</group>

@@ -1,0 +1,123 @@
+<!--
+  Purple Team Lab - Sysmon 配置文件
+  用途:  Windows 内核级日志采集（EDR）
+  优化:  仅采集安全相关事件，降低性能开销
+  部署:  Sysmon64.exe -accepteula -i sysmon-config.xml
+
+  事件列表:
+    EventID 1  - 进程创建（ProcessCreate）
+    EventID 3  - 网络连接（NetworkConnect）
+    EventID 11 - 文件创建（FileCreate）
+    EventID 13 - 注册表修改（RegistryEvent）
+    EventID 22 - DNS 查询（DnsQuery）
+-->
+<Sysmon schemaversion="4.90">
+  <!-- 全局排除（系统正常行为，避免大量日志） -->
+  <EventFiltering>
+
+    <!-- ── 进程创建（EventID 1）── -->
+    <ProcessCreate onmatch="include">
+      <!-- 正常系统进程排除 -->
+      <CommandLine condition="excludes">\Windows\System32\</CommandLine>
+      <CommandLine condition="excludes">\Windows\SysWOW64\</CommandLine>
+      <!-- 重点关注 Temp 目录 -->
+      <Image condition="contains">\Temp\</Image>
+      <Image condition="contains">\Downloads\</Image>
+      <Image condition="contains">\Users\</Image>
+      <!-- 可疑命令行关键字 -->
+      <CommandLine condition="contains">-enc</CommandLine>
+      <CommandLine condition="contains">-e </CommandLine>
+      <CommandLine condition="contains">IEX(</CommandLine>
+      <CommandLine condition="contains">Invoke-</CommandLine>
+      <CommandLine condition="contains">DownloadString</CommandLine>
+      <CommandLine condition="contains">cmd /c</CommandLine>
+      <CommandLine condition="contains">cmd.exe /c</CommandLine>
+      <CommandLine condition="contains">powershell</CommandLine>
+      <CommandLine condition="contains">wscript</CommandLine>
+      <CommandLine condition="contains">cscript</CommandLine>
+      <CommandLine condition="contains">mshta</CommandLine>
+      <CommandLine condition="contains">regsvr32</CommandLine>
+      <CommandLine condition="contains">rundll32</CommandLine>
+      <CommandLine condition="contains">certutil</CommandLine>
+      <CommandLine condition="contains">bitsadmin</CommandLine>
+      <CommandLine condition="contains">net user</CommandLine>
+      <CommandLine condition="contains">net localgroup</CommandLine>
+      <!-- 常见渗透工具 -->
+      <Image condition="end with">mimikatz.exe</Image>
+      <Image condition="end with">procdump.exe</Image>
+      <Image condition="end with">psexec.exe</Image>
+      <Image condition="end with">psexec64.exe</Image>
+    </ProcessCreate>
+
+    <!-- ── 网络连接（EventID 3）- 限制端口减少噪声 ── -->
+    <NetworkConnect onmatch="include">
+      <!-- 内网横向移动端口 -->
+      <DestinationPort condition="is">445</DestinationPort>
+      <DestinationPort condition="is">3389</DestinationPort>
+      <DestinationPort condition="is">22</DestinationPort>
+      <DestinationPort condition="is">135</DestinationPort>
+      <!-- 常见反向连接端口 -->
+      <DestinationPort condition="is">4444</DestinationPort>
+      <DestinationPort condition="is">1337</DestinationPort>
+      <DestinationPort condition="is">6666</DestinationPort>
+      <DestinationPort condition="is">6667</DestinationPort>
+      <DestinationPort condition="is">6668</DestinationPort>
+      <DestinationPort condition="is">6669</DestinationPort>
+      <!-- HTTP/HTTPS 外连 -->
+      <DestinationPort condition="is">80</DestinationPort>
+      <DestinationPort condition="is">443</DestinationPort>
+      <!-- 排除本地回环 -->
+      <DestinationIp condition="ne">127.0.0.1</DestinationIp>
+      <DestinationIp condition="ne">::1</DestinationIp>
+    </NetworkConnect>
+
+    <!-- ── 文件创建（EventID 11）── -->
+    <FileCreate onmatch="include">
+      <!-- 脚本文件创建 -->
+      <TargetFilename condition="end with">.ps1</TargetFilename>
+      <TargetFilename condition="end with">.vbs</TargetFilename>
+      <TargetFilename condition="end with">.vbe</TargetFilename>
+      <TargetFilename condition="end with">.js</TargetFilename>
+      <TargetFilename condition="end with">.jse</TargetFilename>
+      <TargetFilename condition="end with">.bat</TargetFilename>
+      <TargetFilename condition="end with">.cmd</TargetFilename>
+      <!-- 可执行文件 -->
+      <TargetFilename condition="end with">.exe</TargetFilename>
+      <TargetFilename condition="end with">.dll</TargetFilename>
+      <TargetFilename condition="end with">.sys</TargetFilename>
+      <TargetFilename condition="end with">.scr</TargetFilename>
+      <!-- 可疑路径 -->
+      <TargetFilename condition="contains">\AppData\</TargetFilename>
+      <TargetFilename condition="contains">\Temp\</TargetFilename>
+      <TargetFilename condition="contains">\Downloads\</TargetFilename>
+      <TargetFilename condition="contains">\Users\Public\</TargetFilename>
+    </FileCreate>
+
+    <!-- ── 注册表修改（EventID 13）── -->
+    <RegistryEvent onmatch="include">
+      <!-- 自启动相关注册表项 -->
+      <TargetObject condition="contains">\CurrentVersion\Run</TargetObject>
+      <TargetObject condition="contains">\CurrentVersion\RunOnce</TargetObject>
+      <TargetObject condition="contains">\Windows\CurrentVersion\Run</TargetObject>
+      <TargetObject condition="contains">\Microsoft\Windows\CurrentVersion\Run</TargetObject>
+      <!-- 服务相关 -->
+      <TargetObject condition="contains">\Services\</TargetObject>
+      <TargetObject condition="contains">\Terminal Server\</TargetObject>
+      <!-- 用户凭据 -->
+      <TargetObject condition="contains">\Windows NT\CurrentVersion\Winlogon</TargetObject>
+    </RegistryEvent>
+
+    <!-- ── DNS 查询（EventID 22）── -->
+    <DnsQuery onmatch="include">
+      <!-- 常见 C2 域名 |
+      <QueryName condition="contains">.xyz</QueryName>
+      <QueryName condition="contains">.tk</QueryName>
+      <QueryName condition="contains">.ml</QueryName>
+      <QueryName condition="contains">.ga</QueryName>
+      <QueryName condition="contains">.cf</QueryName>
+      <QueryName condition="contains">bit.ly</QueryName>
+      <QueryName condition="contains">tinyurl</QueryName>
+    </DnsQuery>
+
+  </EventFiltering>
+</Sysmon>
